@@ -7,6 +7,8 @@ Scheem is a lightweight, from-scratch neural network framework built entirely in
 Here is how to use Scheem to solve the classic non-linear XOR Problem.
 
 ```python
+from scheem import Scheem
+
 X = [
     [0, 0],
     [0, 1],
