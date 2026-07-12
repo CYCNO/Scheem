@@ -2,6 +2,8 @@
 
 Scheem is a lightweight, from-scratch neural network framework built entirely in Python without using any external library
 
+> Not to be Used in Production because it's very slow since it's written in pure python
+
 ## Quick Start
 
 Here is how to use Scheem to solve the classic non-linear XOR Problem.
