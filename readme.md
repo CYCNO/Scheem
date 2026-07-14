@@ -49,8 +49,8 @@ model.accuracy(X, Y) # generally X_test and Y_test
 model.predict([0, 0])[0][0].data
 # 0.982378009799738
 ```
-For more demos check out [demo directory](https://github.com/CYCNO/Scheem/tree/main/demos)
-For rust implementation check out [scheem_rust](https://github.com/CYCNO/Scheem/tree/main/scheem_rust)
+- For more demos check out [demo directory](https://github.com/CYCNO/Scheem/tree/main/demos)
+- For rust implementation check out [scheem_rust](https://github.com/CYCNO/Scheem/tree/main/scheem_rust)
 
 ## Architecture Under the Hood
 
