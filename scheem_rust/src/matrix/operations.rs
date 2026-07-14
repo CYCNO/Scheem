@@ -42,12 +42,12 @@ impl Add<f64> for Mat {
     type Output = Mat;
 
     fn add(self, other: f64) -> Mat {
-        // create a vec and fill it with 0.0
+        let other_val = ValueRef::new(other);
         let mut mat_data = vec![vec![ValueRef::new(0.0); self.size[1]]; self.size[0]];
 
         for i in 0..self.size[0] {
             for j in 0..self.size[1] {
-                mat_data[i][j] = self.data[i][j].clone() + ValueRef::new(other.clone());
+                mat_data[i][j] = self.data[i][j].clone() + other_val.clone();
             }
         }
 
@@ -72,8 +72,8 @@ impl Mul<Mat> for Mat {
 
         for i in 0..self.size[0] {
             for j in 0..other.size[1] {
-                let mut val = ValueRef::new(0.0);
-                for k in 0..self.size[1] {
+                let mut val = self.data[i][0].clone() * other.data[0][j].clone();
+                for k in 1..self.size[1] {
                     val = val + self.data[i][k].clone() * other.data[k][j].clone();
                 }
                 mat_data[i][j] = val;
@@ -92,12 +92,12 @@ impl Mul<f64> for Mat {
     type Output = Mat;
 
     fn mul(self, other: f64) -> Mat {
-        // create a vec and fill it with 0.0
+        let other_val = ValueRef::new(other);
         let mut mat_data = vec![vec![ValueRef::new(0.0); self.size[1]]; self.size[0]];
 
         for i in 0..self.size[0] {
             for j in 0..self.size[1] {
-                mat_data[i][j] = self.data[i][j].clone() * ValueRef::new(other.clone());
+                mat_data[i][j] = self.data[i][j].clone() * other_val.clone();
             }
         }
 
@@ -135,12 +135,12 @@ impl Sub<f64> for Mat {
     type Output = Mat;
 
     fn sub(self, other: f64) -> Mat {
-        // create a vec and fill it with 0.0
+        let other_val = ValueRef::new(other);
         let mut mat_data = vec![vec![ValueRef::new(0.0); self.size[1]]; self.size[0]];
 
         for i in 0..self.size[0] {
             for j in 0..self.size[1] {
-                mat_data[i][j] = self.data[i][j].clone() - ValueRef::new(other.clone());
+                mat_data[i][j] = self.data[i][j].clone() - other_val.clone();
             }
         }
 

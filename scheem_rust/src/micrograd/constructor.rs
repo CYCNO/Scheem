@@ -10,6 +10,7 @@ impl ValueRef {
             grad: 0.0,
             prev: Vec::new(),
             op: Op::None,
+            visited: false,
         })))
     }
 
@@ -20,6 +21,7 @@ impl ValueRef {
             grad: 0.0,
             prev,
             op,
+            visited: false,
         })))
     }
 

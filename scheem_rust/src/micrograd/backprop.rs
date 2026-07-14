@@ -7,14 +7,12 @@ impl ValueRef {
     // backpropagation
     pub fn backward(&self) {
         let mut topo = vec![];
-        let mut visited = HashSet::new();
-
-        build_topo(self.clone(), &mut topo, &mut visited);
+        build_topo(self.clone(), &mut topo);
 
         self.0.borrow_mut().grad = 1.0;
 
         topo.reverse();
-        for v in topo {
+        for v in &topo {
             let node = v.0.borrow();
 
             let op = node.op.clone();
@@ -25,6 +23,10 @@ impl ValueRef {
                 Op::Add => {
                     node.prev[0].0.borrow_mut().grad += 1.0 * self_grad;
                     node.prev[1].0.borrow_mut().grad += 1.0 * self_grad;
+                }
+                Op::Sub => {
+                    node.prev[0].0.borrow_mut().grad += 1.0 * self_grad;
+                    node.prev[1].0.borrow_mut().grad -= 1.0 * self_grad;
                 }
                 Op::Mul => {
                     let a = node.prev[0].0.borrow().data;
@@ -49,6 +51,11 @@ impl ValueRef {
                 Op::None => {}
             }
         }
+
+        // Reset the visited flag for all traversed nodes so subsequent backward calls work correctly
+        for v in topo {
+            v.0.borrow_mut().visited = false;
+        }
     }
 }
 
@@ -67,7 +74,7 @@ impl Hash for ValueRef {
     }
 }
 
-fn build_topo(root: ValueRef, topo: &mut Vec<ValueRef>, visited: &mut HashSet<ValueRef>) {
+fn build_topo(root: ValueRef, topo: &mut Vec<ValueRef>) {
     // The stack holds (Node, children_processed_flag)
     let mut stack = vec![(root, false)];
 
@@ -78,7 +85,15 @@ fn build_topo(root: ValueRef, topo: &mut Vec<ValueRef>, visited: &mut HashSet<Va
             topo.push(node);
         } else {
             // First time seeing this node. Let's mark it as visited.
-            if visited.insert(node.clone()) {
+            let mut is_new = false;
+            {
+                let mut inner = node.0.borrow_mut();
+                if !inner.visited {
+                    inner.visited = true;
+                    is_new = true;
+                }
+            }
+            if is_new {
                 // 1. Put the current node BACK on the stack, but mark it
                 //    as true so it gets added to `topo` next time we see it.
                 stack.push((node.clone(), true));
@@ -86,7 +101,7 @@ fn build_topo(root: ValueRef, topo: &mut Vec<ValueRef>, visited: &mut HashSet<Va
                 // 2. Add all of its children to the stack to be processed
                 for child in &node.0.borrow().prev {
                     // only add children we haven't visited yet
-                    if !visited.contains(child) {
+                    if !child.0.borrow().visited {
                         stack.push((child.clone(), false));
                     }
                 }

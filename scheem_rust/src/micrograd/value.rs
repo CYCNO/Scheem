@@ -4,6 +4,7 @@ use std::cell::RefCell;
 #[derive(Debug, Clone)]
 pub enum Op {
     Add,
+    Sub,
     Mul,
     Pow(f64),
     Sigmoid,
@@ -21,4 +22,5 @@ pub struct Value {
     pub(crate) grad: f64,
     pub(crate) prev: Vec<ValueRef>,
     pub(crate) op: Op,
+    pub(crate) visited: bool,
 }

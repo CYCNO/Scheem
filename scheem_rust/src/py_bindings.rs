@@ -365,9 +365,17 @@ impl PyMat {
     }
 
     pub fn sum(&self) -> PyValueRef {
-        let mut total = ValueRef::new(0.0);
+        if self.0.data.is_empty() || self.0.data[0].is_empty() {
+            return PyValueRef(ValueRef::new(0.0));
+        }
+        let mut total = self.0.data[0][0].clone();
+        let mut first = true;
         for row in &self.0.data {
             for val in row {
+                if first {
+                    first = false;
+                    continue;
+                }
                 total = total + val.clone();
             }
         }

@@ -44,7 +44,13 @@ impl Sub for ValueRef {
     type Output = ValueRef;
 
     fn sub(self, other: ValueRef) -> ValueRef {
-        self + (other * ValueRef::new(-1.0))
+        let data = self.0.borrow().data - other.0.borrow().data;
+        let prev = vec![self.clone(), other.clone()];
+        ValueRef::new_op(
+            data,
+            prev,
+            Op::Sub
+        )
     }
 }
 
