@@ -50,6 +50,7 @@ model.predict([0, 0])[0][0].data
 # 0.982378009799738
 ```
 For more demos check out [demo directory](https://github.com/CYCNO/Scheem/tree/main/demos)
+For rust implementation check out [scheem_rust](https://github.com/CYCNO/Scheem/tree/main/scheem_rust)
 
 ## Architecture Under the Hood
 
@@ -57,7 +58,7 @@ Scheem is broken down into three core layers of abstraction:
 
 #### 1. `Value` (The Autograd Engine)
 
-At the lowest level, every number is wrapped in a `Value` object. This class implements Python magic methods (`__add__`, `__mul__`, etc.) to track operations. When `.backward()` is called, it performs a topological sort and applies the chain rule to populate the `.grad` attribute of every node in the graph.
+At the lowest level, every number is wrapped in a `Value` object. When `.backward()` is called, it performs a topological sort and applies the chain rule to populate the `.grad` attribute of every node in the graph.
 
 #### 2. `Matrix` (The Linear Algebra Layer)
 
@@ -68,7 +69,7 @@ Because neural networks require bulk calculations, the `Matrix` class organizes 
 The `Scheem` class ties it all together. It manages the forward pass through the hidden layers, calculates the Mean Squared Error cost, and executes the training loop by updating weights using the calculated gradients.
 
 ## Future Work
-- [ ] Build the Core Layers in Rust or C++ for Performance
+- [x] Build the Core Layers in Rust or C++ for Performance
 
 ## References:
 - [MicroGrad | Andrej Karpathy](https://www.youtube.com/watch?v=VMj-3S1tku0)
