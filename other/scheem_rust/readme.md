@@ -1,4 +1,4 @@
-Original Scheem was very slow, I initially thought, it was because of the language (which is kinda true) so i ported it in rust (wasted my 3 days for it), and it did made the training part 10x faster, but still it was very slow, I assume the underlying problem is `micrograd` value storing and with each computation it is creating lot of heap allocations, which is slowing down the process. Also I don't have enough skill for now to make it any better. Probably after some time, when I would gain more knowledge regarding this, I would make it faster
+Only 10 times faster than pure python implementations, recommended to not use it
 
 > It's not like it doesn't work, It does, but it is just very slow
 

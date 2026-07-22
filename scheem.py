@@ -1,97 +1,144 @@
-from matrix import Matrix
+import numpy as np
 
 class Scheem:
-    def __init__(self, layers, X, Y, activation_function="relu"):
-        self.X = Matrix(X)  # For inputs
-        self.Y = Matrix(Y)  # For Outputs
-
-        self.activation_function = activation_function
+    def __init__(self, layers, activation, X_train, Y_train):
+        self.X = np.array(X_train).T
+        self.Y = np.array(Y_train).T
+        self.m = self.X.shape[1]
+        self.layers = layers
+        self.n = len(layers)
+        self.activation = activation
 
         self.W = []
         self.B = []
+        self.Z = [None] * (self.n - 1)
+        self.A = [None] * self.n
 
-        for i in range(0, len(layers) - 1):
-            # input = layers[i], output = layers[i+1]
-            w = Matrix(layers[i], layers[i + 1])
-            b = Matrix(1, layers[i + 1])
-
-            w.random(-1, 1)
-            b.random(-1, 1)
-
+        # Initializing all the params
+        for i in range(self.n - 1):
+            scale = np.sqrt(2.0 / (layers[i] + layers[i + 1]))
+            w = np.random.randn(layers[i + 1], layers[i]) * scale
+            b = np.zeros((layers[i + 1], 1))
             self.W.append(w)
             self.B.append(b)
 
-    def forward(self, x_batch):
-        activation = x_batch if isinstance(x_batch, Matrix) else Matrix(x_batch)
-        if self.activation_function not in ["relu", "sigmoid"]:
-            raise NotImplementedError(f"Activation function '{self.activation_function}' is not supported.")
+    def ReLU(self, Z):
+        return np.maximum(Z, 0)
 
-        for i in range(len(self.W)):
-            z = (activation * self.W[i]) + self.B[i]
+    def ReLU_deriv(self, Z):
+        return (Z > 0).astype(float)
 
-            if i < len(self.W) - 1:
-                if self.activation_function == "relu":
-                    activation = Matrix.relu(z)
-                elif self.activation_function == "sigmoid":
-                    activation = Matrix.sigmoid(z)
-            else: # last layer
-                if self.activation_function == "relu":
-                    activation = z
-                elif self.activation_function == "sigmoid":
-                    activation = Matrix.sigmoid(z)
+    def sigmoid(self, Z):
+        return 1 / (1 + np.exp(-np.clip(Z, -500, 500))) # to avoid large number error
 
-        return activation
+    def sigmoid_deriv(self, A):
+        return A * (1 - A)
 
+    def softmax(self, Z):
+        exps = np.exp(Z - np.max(Z, axis=0, keepdims=True))
+        return exps / np.sum(exps, axis=0, keepdims=True)
+
+    def forward(self):
+        self.A[0] = self.X
+        for i in range(self.n - 1):
+            self.Z[i] = self.W[i] @ self.A[i] + self.B[i]
+            match self.activation[i]:
+                case "relu":
+                    self.A[i + 1] = self.ReLU(self.Z[i])
+                case "sigmoid":
+                    self.A[i + 1] = self.sigmoid(self.Z[i])
+                case "softmax":
+                    self.A[i + 1] = self.softmax(self.Z[i])
+
+    def backprop(self):
+        dW = [None] * (self.n - 1)
+        dB = [None] * (self.n - 1)
+
+        L = self.n - 2  # Output layer index
+
+        # for output layer
+        match self.activation[L]:
+            case "sigmoid" | "softmax":
+                # Natural pairing with Cross-Entropy: dZ simplifies to (A - Y)
+                dZ = self.A[L + 1] - self.Y
+            case "relu":
+                # MSE pairing: dZ = 2 * (A - Y) * ReLU_deriv(Z)
+                dZ = (self.A[L + 1] - self.Y) * self.ReLU_deriv(self.Z[L])
+
+        dW[L] = (1 / self.m) * dZ @ self.A[L].T
+        dB[L] = (1 / self.m) * np.sum(dZ, axis=1, keepdims=True)
+
+        # for hidden layer
+        for i in range(L - 1, -1, -1):
+            match self.activation[i]:
+                case "relu":
+                    deriv = self.ReLU_deriv(self.Z[i])
+                case "sigmoid":
+                    deriv = self.sigmoid_deriv(self.A[i + 1])
+
+            dZ = (self.W[i + 1].T @ dZ) * deriv
+            dW[i] = (1 / self.m) * dZ @ self.A[i].T
+            dB[i] = (1 / self.m) * np.sum(dZ, axis=1, keepdims=True)
+
+        return dW, dB
 
     def cost(self):
-        if self.X.rows != self.Y.rows:
-            print("Rows must be same of both inputs and outputs")
-            return
+        A = self.A[-1]
 
-        cost = 0
-        for i in range(self.X.rows):
-            activation = self.forward(self.X[i])
-            for j in range(self.Y.cols):
-                d = self.Y[i][j] - activation[0][j]
+        match self.activation[-1]:
+            case "sigmoid":
+                # Binary Cross-Entropy
+                A = np.clip(A, 1e-15, 1 - 1e-15)
+                return -np.mean(self.Y * np.log(A) + (1 - self.Y) * np.log(1 - A))
+            case "softmax":
+                # Categorical Cross-Entropy
+                A = np.clip(A, 1e-15, 1 - 1e-15)
+                return -np.mean(np.sum(self.Y * np.log(A), axis=0))
+            case "relu":
+                # Mean Squared Error (MSE) for regression / continuous non-binary values
+                return np.mean((A - self.Y) ** 2)
 
-                cost += d * d
-        return cost / (self.X.rows)
+    def train(self, iters=1000, lr=0.1, log_after=100):
+        for i in range(iters):
+            self.forward()
+            dW, dB = self.backprop()
 
-    def fit(self, iter=10000, lr=0.01):
-        params = [w for rows in self.W for l in rows for w in l] + [
-            b for rows in self.B for l in rows for b in l
-        ]
+            for k in range(self.n - 1):
+                self.W[k] -= lr * dW[k]
+                self.B[k] -= lr * dB[k]
 
-        for i in range(iter):
-            # zero grad all the params
-            for p in params:
-                p.grad = 0.0
-
-            # calculate loss and backprop
-            loss = self.cost()
-            loss.backward()
-
-            # update the params
-            for p in params:
-                p.data -= lr * p.grad
-
-            if i % 1000 == 0:
-                print(f"iter = {i} | cost = {loss}")
-
-
-    def accuracy(self, X_test, Y_test):
-        error = 0
-        for i in range(len(X_test)):
-            x_batch = X_test[i]
-            X = x_batch if isinstance(x_batch, Matrix) else Matrix(x_batch)
-            pred = self.forward(x_batch)
-            error += abs(Y_test[i][0] - pred[0][0].data)
-        return 1 - (error / len(X_test))
+            if i % log_after == 0:
+                print(f"Iteration: {i:4d} | Cost: {self.cost():.8f}")
 
     def predict(self, X):
-        X = X if isinstance(X, Matrix) else Matrix(X)
-        z = self.forward(X)
-        return z
+        X_arr = np.atleast_2d(X)
+        A = [None] * self.n
+        A[0] = X_arr.T
 
+        for i in range(self.n - 1):
+            Z = self.W[i] @ A[i] + self.B[i]
+            match self.activation[i]:
+                case "relu":
+                    A[i + 1] = self.ReLU(Z)
+                case "sigmoid":
+                    A[i + 1] = self.sigmoid(Z)
+                case "softmax":
+                    A[i + 1] = self.softmax(Z)
+        return A[-1]
 
-# TODO: Make sigmoid and ReLU different
+    def accuracy(self, X_test, Y_test):
+        pred = self.predict(X_test)
+        Y = np.array(Y_test).T
+
+        match self.activation[-1]:
+            case "sigmoid":
+                # Binary classification accuracy
+                return np.mean(np.round(pred) == Y)
+            case "softmax":
+                # Multi-class accuracy
+                return np.mean(np.argmax(pred, axis=0) == np.argmax(Y, axis=0))
+            case "relu":
+                # Regression evaluation: R^2 Score
+                ss_res = np.sum((Y - pred) ** 2)
+                ss_tot = np.sum((Y - np.mean(Y)) ** 2)
+                return 1 - (ss_res / (ss_tot + 1e-12))
